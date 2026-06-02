@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "run_config": "with_skill",
+  "expectations": [
+    {"text": "Runs git status or git diff before doing anything", "passed": true, "evidence": "Ran git status + git diff --stat HEAD"},
+    {"text": "Shows a summary of changed files to the user", "passed": true, "evidence": "Listed .claude/skills/ as new untracked directory"},
+    {"text": "Suggests a commit message based on the diff", "passed": true, "evidence": "Suggested 'add Claude Code skills directory with commit-and-push skill'"},
+    {"text": "Asks for user approval before committing", "passed": true, "evidence": "Explicit: 'I will not stage, commit, or push anything until you explicitly say yes'"},
+    {"text": "Asks for user approval before pushing", "passed": true, "evidence": "Stated will ask again separately before pushing"},
+    {"text": "Does not use --no-verify flag", "passed": true, "evidence": "No --no-verify"},
+    {"text": "Does not use --force or --force-with-lease", "passed": true, "evidence": "No force push"}
+  ],
+  "pass_count": 7,
+  "total_count": 7,
+  "pass_rate": 1.0
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "commit-and-push",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "תעשה לי קומיט ותעלה לגיטהאב — סיימתי לכתוב את הקומפוננטה של CanvasView",
+      "expected_output": "The skill should: (1) run git status + git diff, (2) summarize changes in Hebrew, (3) suggest a commit message like 'add CanvasView component', (4) wait for user approval, (5) only then commit, (6) ask before pushing, (7) push only after second approval.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "commit and push my changes please",
+      "expected_output": "The skill should follow the same 5-step flow in English: inspect, summarize, suggest message, get approval, commit, ask to push, push after approval. Should NOT commit or push without asking.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "תשמור את השינויים בגיט אבל אל תעלה לגיטהאב",
+      "expected_output": "The skill should inspect changes, suggest a commit message, get approval, create the commit — but after committing, when it asks about pushing, it should accept 'no' gracefully and stop without pushing.",
+      "files": []
+    }
+  ]
+}

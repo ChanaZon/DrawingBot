@@ -1,0 +1,93 @@
+{
+  "skill_name": "commit-and-push",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "label": "With commit-and-push skill",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "hebrew-commit-and-push",
+          "pass_rate": 1.0,
+          "pass_count": 8,
+          "total_count": 8,
+          "duration_ms": 37580,
+          "total_tokens": 19508
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "english-commit-and-push",
+          "pass_rate": 1.0,
+          "pass_count": 7,
+          "total_count": 7,
+          "duration_ms": 34012,
+          "total_tokens": 19170
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "commit-only-no-push",
+          "pass_rate": 1.0,
+          "pass_count": 5,
+          "total_count": 5,
+          "duration_ms": 37020,
+          "total_tokens": 19474
+        }
+      ],
+      "aggregate": {
+        "mean_pass_rate": 1.0,
+        "mean_duration_ms": 36204,
+        "mean_tokens": 19384
+      }
+    },
+    {
+      "name": "without_skill",
+      "label": "Without skill (baseline)",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "hebrew-commit-and-push",
+          "pass_rate": 0.75,
+          "pass_count": 6,
+          "total_count": 8,
+          "duration_ms": 58349,
+          "total_tokens": 21133
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "english-commit-and-push",
+          "pass_rate": 0.857,
+          "pass_count": 6,
+          "total_count": 7,
+          "duration_ms": 37400,
+          "total_tokens": 19024
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "commit-only-no-push",
+          "pass_rate": 0.8,
+          "pass_count": 4,
+          "total_count": 5,
+          "duration_ms": 29744,
+          "total_tokens": 18720
+        }
+      ],
+      "aggregate": {
+        "mean_pass_rate": 0.802,
+        "mean_duration_ms": 41831,
+        "mean_tokens": 19626
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate": "+19.8%",
+    "duration_ms": "-5627ms (skill is faster on average)",
+    "tokens": "-242 tokens"
+  },
+  "analyst_observations": [
+    "The skill achieves 100% pass rate vs 80.2% baseline — the main gains are in the approval-gate assertions.",
+    "The critical differentiator: the skill enforces a dedicated push approval gate (separate from commit approval), which the baseline consistently skips.",
+    "Baseline eval-1 failed 'suggests correct commit message' — it hallucinated a CanvasView commit message when no such files existed; the skill correctly identified this edge case.",
+    "The skill is also faster on average (36s vs 42s) — likely because it follows a structured flow without exploratory backtracking."
+  ]
+}

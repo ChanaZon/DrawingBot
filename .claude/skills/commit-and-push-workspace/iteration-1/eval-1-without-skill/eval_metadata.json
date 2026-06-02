@@ -1,0 +1,15 @@
+{
+  "eval_id": 1,
+  "eval_name": "hebrew-commit-and-push",
+  "prompt": "Make a commit and push to GitHub - finished writing the CanvasView component (Hebrew prompt)",
+  "assertions": [
+    {"id": "runs-git-status", "description": "Runs git status or git diff before doing anything"},
+    {"id": "summarizes-changes", "description": "Shows a summary of changed files to the user"},
+    {"id": "suggests-message", "description": "Suggests a commit message based on the diff"},
+    {"id": "asks-before-commit", "description": "Asks for user approval before committing (does not commit silently)"},
+    {"id": "asks-before-push", "description": "Asks for user approval before pushing (does not push silently)"},
+    {"id": "no-no-verify", "description": "Does not use --no-verify flag"},
+    {"id": "no-force-push", "description": "Does not use --force or --force-with-lease"},
+    {"id": "hebrew-response", "description": "Responds in Hebrew matching the user language"}
+  ]
+}

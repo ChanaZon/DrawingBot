@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "commit-only-no-push",
+  "prompt": "Save changes to git but do NOT push to GitHub (Hebrew prompt)",
+  "assertions": [
+    {"id": "runs-git-status", "description": "Runs git status or git diff before doing anything"},
+    {"id": "suggests-message", "description": "Suggests a commit message"},
+    {"id": "asks-before-commit", "description": "Asks for user approval before committing"},
+    {"id": "respects-no-push", "description": "Does not push when user says commit only"},
+    {"id": "no-force-push", "description": "Does not use --force or --force-with-lease"}
+  ]
+}

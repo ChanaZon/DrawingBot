@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "run_config": "without_skill",
+  "expectations": [
+    {"text": "Runs git status or git diff before doing anything", "passed": true, "evidence": "Ran git status and checked the diff"},
+    {"text": "Shows a summary of changed files to the user", "passed": true, "evidence": "Mentioned .claude/skills/ untracked and no CanvasView files"},
+    {"text": "Suggests a commit message based on the diff", "passed": false, "evidence": "Suggested 'feat: add CanvasView component' for files that don't exist -- wrong inference"},
+    {"text": "Asks for user approval before committing (does not commit silently)", "passed": true, "evidence": "Asked informal approval question -- present but loose"},
+    {"text": "Asks for user approval before pushing (does not push silently)", "passed": false, "evidence": "Bundled push approval with commit approval in one question, no dedicated push gate"},
+    {"text": "Does not use --no-verify flag", "passed": true, "evidence": "No --no-verify"},
+    {"text": "Does not use --force or --force-with-lease", "passed": true, "evidence": "No force push"},
+    {"text": "Responds in the user language (Hebrew)", "passed": true, "evidence": "Responded in Hebrew"}
+  ],
+  "pass_count": 6,
+  "total_count": 8,
+  "pass_rate": 0.75
+}

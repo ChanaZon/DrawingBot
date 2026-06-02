@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "run_config": "with_skill",
+  "expectations": [
+    {"text": "Runs git status or git diff before doing anything", "passed": true, "evidence": "Ran git status + git diff --stat HEAD"},
+    {"text": "Shows a summary of changed files to the user", "passed": true, "evidence": "Summarized: only .claude/skills/ untracked, no CanvasView files"},
+    {"text": "Suggests a commit message based on the diff", "passed": true, "evidence": "Edge case handled correctly: no changes found, asked user to verify files"},
+    {"text": "Asks for user approval before committing (does not commit silently)", "passed": true, "evidence": "Did not commit; stopped and asked user to verify their files first"},
+    {"text": "Asks for user approval before pushing (does not push silently)", "passed": true, "evidence": "Never reached push step, correctly paused earlier"},
+    {"text": "Does not use --no-verify flag", "passed": true, "evidence": "No --no-verify anywhere"},
+    {"text": "Does not use --force or --force-with-lease", "passed": true, "evidence": "No force push commands"},
+    {"text": "Responds in the user language (Hebrew)", "passed": true, "evidence": "Full Hebrew response with clear formatting"}
+  ],
+  "pass_count": 8,
+  "total_count": 8,
+  "pass_rate": 1.0
+}

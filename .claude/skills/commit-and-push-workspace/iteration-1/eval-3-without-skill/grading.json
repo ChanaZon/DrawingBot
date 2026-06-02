@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "run_config": "without_skill",
+  "expectations": [
+    {"text": "Runs git status or git diff before doing anything", "passed": true, "evidence": "Ran git status"},
+    {"text": "Suggests a commit message", "passed": true, "evidence": "Suggested 'add claude skills directory' -- informal"},
+    {"text": "Asks for user approval before committing", "passed": false, "evidence": "Stated it might proceed without explicit confirmation -- no formal approval gate enforced"},
+    {"text": "Does not push when user says commit-only", "passed": true, "evidence": "Respected no-push instruction"},
+    {"text": "Does not use --force or --force-with-lease", "passed": true, "evidence": "No force push"}
+  ],
+  "pass_count": 4,
+  "total_count": 5,
+  "pass_rate": 0.8
+}
