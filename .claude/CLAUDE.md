@@ -23,7 +23,8 @@ drawing-bot/
 │       │   ├── drawEngine.ts      # render(ctx, SceneObject[]) — pure
 │       │   └── hitTest.ts         # future: point-in-object for selection
 │       ├── store/
-│       │   └── useDrawingStore.ts # Zustand: scene graph + delta history
+│       │   ├── index.ts           # configureStore, RootState, AppDispatch, typed hooks
+│       │   └── drawingSlice.ts    # Redux Toolkit: scene graph + delta history
 │       ├── api/
 │       │   └── drawingApi.ts      # CRUD to ASP.NET backend
 │       ├── components/
@@ -51,7 +52,7 @@ drawing-bot/
     ├── Validators/
     │   └── DrawCommandValidator.cs# FluentValidation on LLM JSON
     └── Data/
-        └── AppDbContext.cs        # EF Core + SQLite/SQL Server
+        └── AppDbContext.cs        # EF Core + SQL Server
 ```
 
 ---
@@ -60,18 +61,19 @@ drawing-bot/
 
 ### Frontend
 - **React 18** + **TypeScript** (Vite)
-- **Zustand** — delta-based undo/redo (not snapshots)
+- **Redux Toolkit** (`@reduxjs/toolkit` + `react-redux`) — delta-based undo/redo (not snapshots)
 - **Zod** — runtime validation of every LLM response before canvas touch
 - **Canvas API** — native HTML5 canvas; render from scene graph only
 - **Axios** — HTTP client
 - **Tailwind CSS** — styling
 - **react-error-boundary** — wrap CanvasView and DrawingList
+- **Vitest** — unit tests for pipeline + drawEngine
 
 ### Backend
 - **ASP.NET Core 8** Web API
-- **Entity Framework Core** + **SQLite** (dev) / **SQL Server** (prod)
+- **Entity Framework Core** + **SQL Server**
 - **FluentValidation** — server-side validation of LLM output
-- **JWT Auth** — user identity
+- **JWT Auth** — user identity (added in Phase 5, not earlier)
 - **Microsoft.Extensions.Http** — typed HttpClient for LLM API
 
 ---
@@ -92,6 +94,8 @@ Frontend                    Backend (ASP.NET)          LLM (Gemini/GPT)
 ```
 
 `DrawController.cs` holds the API key in `appsettings.json` / environment variables, calls the LLM, validates the response with FluentValidation, and returns the sanitized `DrawCommand[]` to the frontend.
+
+> **⚠️ API Key Security:** The Gemini API key must NEVER be committed to Git. Store it in `appsettings.Development.json` (gitignored), via `dotnet user-secrets`, or as an environment variable (`LLM__APIKEY`).
 
 ---
 
@@ -217,21 +221,33 @@ For a full LLM draw (which replaces everything), the delta is:
 This means memory cost per step is O(changed objects), not O(total scene).
 
 ```typescript
-// Zustand store shape
+// Redux Toolkit slice — store/drawingSlice.ts
 type DrawingState = {
   scene: SceneObject[];         // current rendered scene
   history: HistoryEntry[];      // all recorded deltas
   historyIndex: number;         // points to last applied entry (-1 = clean)
   prompt: string;
   isLoading: boolean;
+  isAuthenticated: boolean;
   currentDrawingId: number | null;
-  // actions:
-  applyDelta: (delta: SceneDelta, label: string) => void;
-  undo: () => void;
-  redo: () => void;
-  clear: () => void;
-  loadScene: (objects: SceneObject[]) => void;
 };
+
+// Actions (reducers in createSlice):
+// applyDelta(state, action: PayloadAction<{delta: SceneDelta, label: string}>)
+// undo(state)
+// redo(state)
+// clear(state)
+// loadScene(state, action: PayloadAction<SceneObject[]>)
+// setLoading / setPrompt / setAuthenticated / setCurrentDrawingId
+```
+
+```typescript
+// store/index.ts — typed hooks
+export const store = configureStore({ reducer: { drawing: drawingReducer } });
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 ```
 
 ---
@@ -244,21 +260,21 @@ type DrawingState = {
 
 ```sql
 CREATE TABLE Drawings (
-  Id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  UserId       TEXT    NOT NULL,
-  Prompt       TEXT    NOT NULL,
-  Title        TEXT,
-  ThumbnailB64 TEXT,
-  CreatedAt    DATETIME NOT NULL,
-  UpdatedAt    DATETIME NOT NULL
+  Id           INT IDENTITY PRIMARY KEY,
+  UserId       NVARCHAR(450) NOT NULL,
+  Prompt       NVARCHAR(2000) NOT NULL,
+  Title        NVARCHAR(200),
+  ThumbnailB64 NVARCHAR(MAX),
+  CreatedAt    DATETIME2 NOT NULL,
+  UpdatedAt    DATETIME2 NOT NULL
 );
 
 CREATE TABLE DrawingCommands (
-  Id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  DrawingId  INTEGER NOT NULL REFERENCES Drawings(Id) ON DELETE CASCADE,
-  SortOrder  INTEGER NOT NULL,
-  Kind       TEXT    NOT NULL,   -- "circle", "rect", etc.
-  ParamsJson TEXT    NOT NULL    -- JSON of just that command's fields
+  Id         INT IDENTITY PRIMARY KEY,
+  DrawingId  INT NOT NULL REFERENCES Drawings(Id) ON DELETE CASCADE,
+  SortOrder  INT NOT NULL,
+  Kind       NVARCHAR(50) NOT NULL,   -- "circle", "rect", etc.
+  ParamsJson NVARCHAR(MAX) NOT NULL   -- JSON of just that command's fields
 );
 ```
 
@@ -304,7 +320,7 @@ public class DrawingCommand {
 
 | Method | Route                     | Auth | Description                         |
 |--------|---------------------------|------|-------------------------------------|
-| POST   | /api/draw/parse           | JWT  | Send prompt → get DrawCommand[]     |
+| POST   | /api/draw/parse           | JWT (Phase 5+) | Send prompt → get DrawCommand[] |
 | POST   | /api/drawings             | JWT  | Save new drawing                    |
 | GET    | /api/drawings             | JWT  | List user's drawings (paginated)    |
 | GET    | /api/drawings/{id}        | JWT  | Load drawing by ID                  |
@@ -323,14 +339,16 @@ VITE_API_BASE_URL=http://localhost:5000
 # No LLM key here — it lives on the server
 ```
 
-### Backend (`appsettings.Development.json`)
+### Backend (`appsettings.Development.json`) — **gitignored, never commit**
 ```json
 {
-  "ConnectionStrings": { "DefaultConnection": "Data Source=drawingbot.db" },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=DrawingBot;Trusted_Connection=True;TrustServerCertificate=True"
+  },
   "Jwt": { "Secret": "...", "Issuer": "drawing-bot", "Audience": "drawing-bot" },
   "Llm": {
     "Provider": "gemini",
-    "ApiKey": "...",
+    "ApiKey": "YOUR_GEMINI_KEY_HERE",
     "Model": "gemini-2.0-flash",
     "MaxOutputTokens": 2048,
     "TimeoutSeconds": 30
@@ -350,41 +368,49 @@ Goal: shapes render from hardcoded scene objects.
 4. `components/CanvasView.tsx` — renders from hardcoded scene
 5. `components/ErrorBoundary.tsx`
 
-### Phase 2 — Pipeline + State
-Goal: raw JSON → validated → scene graph → rendered.
+### Phase 2 — Pipeline + Redux State
+Goal: raw JSON → validated → scene graph → Redux store → rendered.
 1. `pipeline/validateCommands.ts`
 2. `pipeline/normalizeCommands.ts`
 3. `pipeline/index.ts`
-4. Zustand store with delta undo/redo
-5. `components/Toolbar.tsx` — Undo/Redo/Clear
-6. Test pipeline with mock LLM responses
+4. `store/drawingSlice.ts` — Redux Toolkit slice with delta undo/redo
+5. `store/index.ts` — configureStore + typed hooks (`useAppSelector`, `useAppDispatch`)
+6. Wrap `<App />` in `<Provider store={store}>` in `main.tsx`
+7. `components/Toolbar.tsx` — Undo/Redo/Clear
+
+### Phase 2.5 — Unit Tests
+Goal: catch regressions in pipeline and renderer early.
+- `pipeline/validateCommands.test.ts`
+- `pipeline/normalizeCommands.test.ts`
+- `canvas/drawEngine.test.ts`
+- Tool: **Vitest** + jsdom
 
 ### Phase 3 — Backend: LLM Endpoint
-Goal: backend proxies LLM call securely.
+Goal: backend proxies LLM call. **No auth yet — `[AllowAnonymous]`.**
 1. ASP.NET Core scaffold
-2. `LlmService.cs` — Gemini HTTP call
-3. `DrawController.cs` — POST /api/draw/parse
+2. `LlmService.cs` — Gemini HTTP call with detailed system prompt
+3. `DrawController.cs` — POST /api/draw/parse (`[AllowAnonymous]`)
 4. FluentValidation on response
-5. JWT auth middleware
 
 ### Phase 4 — Frontend LLM Integration
-Goal: type prompt → backend → parse → render.
+Goal: type prompt → backend → Redux → render (end-to-end).
 1. `api/drawingApi.ts` — parse endpoint call
-2. `components/PromptBar.tsx` — wired to store
+2. `components/PromptBar.tsx` — dispatches to Redux store
 3. Loading state + error display
-4. End-to-end test: "draw a red circle"
 
-### Phase 5 — Backend: CRUD + DB
-Goal: save and load drawings.
-1. EF Core models + migrations (normalized schema)
+### Phase 5 — Backend: CRUD + DB + Auth
+Goal: save/load drawings with SQL Server. JWT Auth added here.
+1. EF Core models + migrations (SQL Server, normalized schema)
 2. `DrawingsController.cs` — full CRUD
 3. `AuthController.cs` + register/login
+4. JWT middleware added to `Program.cs`
+5. `DrawController` switches from `[AllowAnonymous]` to `[Authorize]`
 
 ### Phase 6 — Save/Load UI
 Goal: full round-trip.
 1. Save with thumbnail (canvas.toDataURL)
 2. `components/DrawingList.tsx`
-3. Auth forms (register / login)
+3. `components/AuthForm.tsx` — register/login, dispatches `setAuthenticated`
 
 ### Phase 7 — Polish
 - Responsive layout + mobile canvas scaling
