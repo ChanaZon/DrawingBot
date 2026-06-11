@@ -17,7 +17,7 @@ The project is a Fullstack interactive web application where the user types a fr
 ## Architecture
 
 ```
-Frontend (React 19 + TS + Vite)     Backend (ASP.NET Core 8)
+Frontend (React 19 + TS + Vite)     Backend (ASP.NET Core 10)
 ┌───────────────────────────┐       ┌──────────────────────────┐
 │ PromptBar                 │──────▶│ POST /api/draw/parse      │──▶ Gemini
 │ CanvasView (800×600)      │◀──────│ GET/POST /api/drawings    │

@@ -1,0 +1,18 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=DrawingBot;Trusted_Connection=True;TrustServerCertificate=True"
+  },
+  "Llm": {
+    "Provider": "gemini",
+    "ApiKey": "YOUR_GEMINI_KEY_HERE",
+    "Model": "gemini-2.0-flash",
+    "MaxOutputTokens": 2048,
+    "TimeoutSeconds": 30
+  }
+}

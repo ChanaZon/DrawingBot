@@ -41,7 +41,7 @@ drawing-bot/
 │       └── utils/
 │           └── colorUtils.ts      # CSS color validation / normalization
 │
-└── backend/                       # ASP.NET Core 8 Web API
+└── backend/                       # ASP.NET Core 10 Web API
     ├── Controllers/
     │   ├── DrawController.cs      # POST /api/draw/parse  ← LLM lives HERE
     │   ├── DrawingsController.cs  # CRUD for saved drawings
@@ -74,7 +74,7 @@ drawing-bot/
 - **Vitest** — unit tests for pipeline + drawEngine
 
 ### Backend
-- **ASP.NET Core 8** Web API
+- **ASP.NET Core 10** Web API
 - **Entity Framework Core** + **SQL Server**
 - **FluentValidation** — server-side validation of LLM output
 - **JWT Auth** — user identity (added in Phase 5, not earlier)
