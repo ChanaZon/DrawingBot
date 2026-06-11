@@ -1,5 +1,9 @@
 # Drawing Bot — Natural Language Drawing Application
 
+## Language Policy
+
+All code, UI strings, variable names, file names, error messages, and documentation must be in **English only**. Hebrew is permitted exclusively in inline code comments (`// ...` or `/* ... */`). Never write Hebrew in user-facing text, string literals, identifiers, or markdown docs.
+
 ## Project Overview
 An interactive web application where users type natural-language drawing instructions (e.g., "draw a sunset over the sea"), an LLM parses the prompt into structured JSON drawing commands, and a canvas engine renders the result. Drawings can be saved to and loaded from a backend API.
 
