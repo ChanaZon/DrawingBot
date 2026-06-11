@@ -14,7 +14,7 @@ An interactive web application where users type natural-language drawing instruc
 ```
 drawing-bot/
 ├── CLAUDE.md
-├── frontend/                      # React 18 + TypeScript (Vite)
+├── frontend/                      # React 19 + TypeScript (Vite)
 │   └── src/
 │       ├── types/
 │       │   ├── DrawCommand.ts     # LLM raw output schema (Zod)
@@ -64,7 +64,7 @@ drawing-bot/
 ## Tech Stack
 
 ### Frontend
-- **React 18** + **TypeScript** (Vite)
+- **React 19** + **TypeScript** (Vite)
 - **Redux Toolkit** (`@reduxjs/toolkit` + `react-redux`) — delta-based undo/redo (not snapshots)
 - **Zod** — runtime validation of every LLM response before canvas touch
 - **Canvas API** — native HTML5 canvas; render from scene graph only
