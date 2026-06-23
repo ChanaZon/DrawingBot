@@ -4,6 +4,21 @@
 
 All code, UI strings, variable names, file names, error messages, and documentation must be in **English only**. Hebrew is permitted exclusively in inline code comments (`// ...` or `/* ... */`). Never write Hebrew in user-facing text, string literals, identifiers, or markdown docs.
 
+## Working Conventions — Use the Project's Agents & Skills
+
+This project ships purpose-built agents and skills. **Use them as part of routine work — do not hand-roll what a skill already encodes, and do not skip the review agents.** Prefer the project tool over an ad-hoc approach.
+
+**Skills (use when starting the matching task):**
+- `add-draw-command` — adding a new shape/primitive (star, heart, grid, …). Touches every layer (Zod, SceneObject, drawEngine, FluentValidation, DB). Always use this instead of editing layers by hand.
+- `add-crud-endpoint` — adding a backend route/controller action (Phase 5+). Follows the Controller + Service + Validator + DI pattern with JWT + ownership checks.
+- `commit-and-push` — any commit or push to git. Never run `git commit`/`git push` directly.
+
+**Agents (run before considering a change done):**
+- `drawing-bot-reviewer` — run on the diff after writing/editing frontend or backend code, and before committing. Reviews against project invariants no linter catches.
+- `schema-parity-checker` — run whenever a command type or field is added/changed, on mysterious 422s, or before committing schema-touching work. Verifies Zod ↔ FluentValidation ↔ SceneObject stay in sync.
+
+**Definition of done for a code change:** typecheck/tests/lint pass **and** the relevant review agent above has been run on the diff. If an agent invocation fails transiently (e.g. a 500), retry before treating the step as skipped.
+
 ## Project Overview
 An interactive web application where users type natural-language drawing instructions (e.g., "draw a sunset over the sea"), an LLM parses the prompt into structured JSON drawing commands, and a canvas engine renders the result. Drawings can be saved to and loaded from a backend API.
 
