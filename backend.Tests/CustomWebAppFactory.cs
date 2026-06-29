@@ -1,4 +1,5 @@
 using backend.Data;
+using backend.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -18,6 +19,10 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>
     // databases vanish when their last connection closes, so this keeps the schema
     // and data alive across requests.
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    // Test double for the LLM, swapped in for the real Gemini-backed service so the
+    // parse endpoint is deterministic. Tests set its delegates before each call.
+    public FakeLlmService Llm { get; } = new();
 
     public CustomWebAppFactory()
     {
@@ -55,6 +60,16 @@ public class CustomWebAppFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
 
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+
+            // Replace the real Gemini-backed ILlmService (registered via
+            // AddHttpClient) with the deterministic test double.
+            var llmDescriptors = services
+                .Where(d => d.ServiceType == typeof(ILlmService))
+                .ToList();
+            foreach (var descriptor in llmDescriptors)
+                services.Remove(descriptor);
+
+            services.AddSingleton<ILlmService>(Llm);
         });
     }
 

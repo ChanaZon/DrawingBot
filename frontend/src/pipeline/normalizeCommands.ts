@@ -36,15 +36,22 @@ function resolveFont(font?: string, size?: number): string {
  *
  * A `clear` command resets the scene being built: everything accumulated before
  * it is discarded, matching the canvas semantics of "wipe, then keep drawing".
+ *
+ * @param startZIndex zIndex to assign the first object (default 0). In EDIT mode
+ *   the caller passes `maxExistingZIndex + 1` so appended shapes paint on top of
+ *   the shapes already on the canvas.
  */
-export function normalizeCommands(commands: DrawCommand[]): SceneObject[] {
+export function normalizeCommands(
+  commands: DrawCommand[],
+  startZIndex = 0,
+): SceneObject[] {
   const out: SceneObject[] = [];
-  let zIndex = 0;
+  let zIndex = startZIndex;
 
   for (const cmd of commands) {
     if (cmd.type === "clear") {
       out.length = 0;
-      zIndex = 0;
+      zIndex = startZIndex;
       continue;
     }
     out.push(normalizeOne(cmd, zIndex));

@@ -18,11 +18,23 @@ public class DrawController : ControllerBase
         _parsing = parsing;
     }
 
-    // POST /api/draw/parse  — prompt in, validated DrawCommand[] out.
-    // Thin: delegate to the service, then map its Result to an HTTP response.
+    // POST /api/draw/parse  — prompt in, drawing out.
+    // CREATE mode (no current commands): returns the full DrawCommand[].
+    // EDIT mode (current commands supplied): returns { add, remove } so existing
+    // shapes are preserved. Thin: delegate to the service, then map the Result.
     [HttpPost("parse")]
     public async Task<IActionResult> Parse([FromBody] ParsePromptRequest request, CancellationToken ct)
     {
+        if (request.CurrentCommands is { Count: > 0 } current)
+        {
+            var editResult = await _parsing.ParseEditAsync(request.Prompt, current, ct);
+
+            if (editResult.IsSuccess)
+                return Ok(new ParseEditResponse(editResult.Value!.Add, editResult.Value!.Remove));
+
+            return MapError(editResult.Error!);
+        }
+
         var result = await _parsing.ParsePromptAsync(request.Prompt, ct);
 
         if (result.IsSuccess)

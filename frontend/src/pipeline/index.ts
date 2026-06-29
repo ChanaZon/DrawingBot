@@ -39,3 +39,5 @@ export function describePipelineError(error: PipelineError): string {
 export type { ValidationError, FieldIssue } from "./validateCommands";
 export { validateCommands } from "./validateCommands";
 export { normalizeCommands } from "./normalizeCommands";
+export { denormalizeScene } from "./denormalizeCommands";
+export { runEditPipeline } from "./applyEdit";

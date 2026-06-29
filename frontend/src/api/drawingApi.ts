@@ -1,4 +1,5 @@
 import axios, { type AxiosError } from "axios";
+import type { DrawCommand } from "../types/DrawCommand";
 
 // HTTP client for the ASP.NET backend. The frontend never holds an LLM API key
 // (CLAUDE.md > Security): prompts go to POST /api/draw/parse and the server
@@ -9,8 +10,12 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000";
 
 const http = axios.create({ baseURL });
 
-// Backend success body for POST /api/draw/parse: { commands: DrawCommand[] }.
+// Backend success body for POST /api/draw/parse in CREATE mode: { commands: DrawCommand[] }.
 type ParseResponseBody = { commands: unknown };
+
+// Success body in EDIT mode: shapes to append + indices to remove. Returned raw
+// (unvalidated) so runEditPipeline stays the single validation gate.
+type ParseEditResponseBody = { add: unknown; remove: unknown };
 
 // Backend error body (see DrawController.MapError): always carries `error`, plus
 // one of `message` / `raw` / `errors` depending on the failure.
@@ -41,6 +46,24 @@ export async function parsePrompt(prompt: string): Promise<unknown> {
       prompt,
     });
     return data.commands;
+  } catch (err) {
+    throw new DrawingApiError(toFriendlyMessage(err));
+  }
+}
+
+// EDIT mode: send the prompt together with the current drawing (as DrawCommand[])
+// so the backend asks the LLM only for changes. Returns the raw { add, remove }
+// for runEditPipeline to validate. Throws DrawingApiError on failure.
+export async function requestEdit(
+  prompt: string,
+  currentCommands: DrawCommand[],
+): Promise<ParseEditResponseBody> {
+  try {
+    const { data } = await http.post<ParseEditResponseBody>("/api/draw/parse", {
+      prompt,
+      currentCommands,
+    });
+    return { add: data.add, remove: data.remove };
   } catch (err) {
     throw new DrawingApiError(toFriendlyMessage(err));
   }

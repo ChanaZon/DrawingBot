@@ -10,6 +10,11 @@ public interface ILlmService
     // Returns the raw JSON text the LLM produced (expected: a DrawCommand[] array).
     // Throws LlmUnavailableException (→503) or LlmInvalidResponseException (→422).
     Task<string> GenerateCommandsJsonAsync(string prompt, CancellationToken ct);
+
+    // EDIT mode: given the current drawing as a DrawCommand[] JSON string and a
+    // natural-language change request, returns the raw JSON text the LLM produced
+    // (expected: { "add": DrawCommand[], "remove": int[] }). Same exceptions.
+    Task<string> GenerateEditJsonAsync(string prompt, string currentCommandsJson, CancellationToken ct);
 }
 
 // Calls Google Gemini's generateContent endpoint and returns the model's raw JSON.
@@ -64,7 +69,69 @@ public class LlmService : ILlmService
         Example response: [{"type":"background","color":"white"},{"type":"circle","cx":400,"cy":300,"r":80,"fill":"red"}]
         """;
 
+    // EDIT mode: the model is shown the current drawing and must return only the
+    // changes — never a regenerated full scene — so existing shapes never drift.
+    private const string EditSystemPrompt = """
+        You edit an existing drawing on an 800x600 canvas (origin (0,0) top-left).
+        You are given the current drawing as a JSON array of commands; the array
+        INDEX (0-based) identifies each existing shape.
+
+        The user asks to add and/or remove things. Respond with ONLY a JSON object:
+          { "add": [ <new commands> ], "remove": [ <indices to delete> ] }
+        No prose, no markdown, no code fences.
+
+        Rules:
+        - NEVER modify, move, restyle, or re-emit an existing shape. To keep a shape,
+          simply leave it out of both "add" and "remove".
+        - To add new shapes, put new command objects in "add" (same schema and color
+          rules as below). Keep coordinates inside 0..800 / 0..600.
+        - To delete shapes, put their indices (into the given array) in "remove".
+        - If nothing should be added, use "add": []. If nothing removed, "remove": [].
+        - Use at most 200 commands in "add".
+        - NEVER put a "background" or "clear" command in "add": the background cannot
+          be changed in an edit, and clearing is not an additive operation.
+
+        Command schema for items in "add" (each has a "type" field):
+        - { "type": "circle", "cx": number, "cy": number, "r": number>0,
+            "fill"?: color, "stroke"?: color, "strokeWidth"?: number }
+        - { "type": "rect", "x": number, "y": number, "w": number>0, "h": number>0,
+            "fill"?: color, "stroke"?: color, "strokeWidth"?: number, "rx"?: number }
+        - { "type": "line", "x1": number, "y1": number, "x2": number, "y2": number,
+            "color"?: color, "width"?: number }
+        - { "type": "triangle", "x1": number, "y1": number, "x2": number, "y2": number,
+            "x3": number, "y3": number, "fill"?: color, "stroke"?: color }
+        - { "type": "ellipse", "cx": number, "cy": number, "rx": number>0, "ry": number>0,
+            "fill"?: color, "stroke"?: color }
+        - { "type": "polygon", "points": [{ "x": number, "y": number }, ...>=3],
+            "fill"?: color, "stroke"?: color }
+        - { "type": "text", "x": number, "y": number, "content": string,
+            "font"?: string, "color"?: color, "size"?: number }
+        - { "type": "arc", "cx": number, "cy": number, "r": number>0,
+            "startAngle": number, "endAngle": number, "color"?: color, "width"?: number }
+        Colors must be valid CSS: hex, a lowercase named color, or rgb()/rgba(...).
+
+        Example current drawing: [{"type":"background","color":"skyblue"},{"type":"circle","cx":700,"cy":100,"r":60,"fill":"yellow"}]
+        Example request: "remove the sun and add green grass at the bottom".
+        Example response: {"add":[{"type":"rect","x":0,"y":520,"w":800,"h":80,"fill":"green"}],"remove":[1]}
+        """;
+
     public async Task<string> GenerateCommandsJsonAsync(string prompt, CancellationToken ct)
+    {
+        return await CallAsync(SystemPrompt, prompt, ct);
+    }
+
+    public async Task<string> GenerateEditJsonAsync(
+        string prompt, string currentCommandsJson, CancellationToken ct)
+    {
+        var userContent =
+            $"Current drawing (JSON array, index = position):\n{currentCommandsJson}\n\nUser request: {prompt}";
+        return await CallAsync(EditSystemPrompt, userContent, ct);
+    }
+
+    // Shared Gemini call used by both create and edit modes: build the request with
+    // the given system prompt + user content, retry transient failures, and return
+    // the model's extracted text.
+    private async Task<string> CallAsync(string systemPrompt, string userContent, CancellationToken ct)
     {
         // Gemini 2.5 models "think" by default, and thinking tokens are billed against
         // maxOutputTokens — which can starve the actual JSON and truncate it. Disable
@@ -86,8 +153,8 @@ public class LlmService : ILlmService
 
         var requestBody = new
         {
-            system_instruction = new { parts = new[] { new { text = SystemPrompt } } },
-            contents = new[] { new { parts = new[] { new { text = prompt } } } },
+            system_instruction = new { parts = new[] { new { text = systemPrompt } } },
+            contents = new[] { new { parts = new[] { new { text = userContent } } } },
             generationConfig,
         };
 

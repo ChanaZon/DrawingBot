@@ -19,6 +19,19 @@ This project ships purpose-built agents and skills. **Use them as part of routin
 
 **Definition of done for a code change:** typecheck/tests/lint pass **and** the relevant review agent above has been run on the diff. If an agent invocation fails transiently (e.g. a 500), retry before treating the step as skipped.
 
+## Working Conventions — Frequent Verification & Step Logging
+
+These apply to **every task in every session**, regardless of how the request is phrased.
+
+**Verify frequently — not only at the end:**
+- After each meaningful step, run the relevant check for the layer you touched (typecheck / unit test / build). Do not batch all verification to the end of the task.
+- Always include **edge-case** checks, not just the happy path. Cover: empty input, boundary values (0, negatives, very large numbers), invalid / malformed data, missing optional fields, large scenes (near the 200-command cap), and schema drift between client and server.
+- Report verification results honestly: if a check fails, say so with the output; if a step was skipped, say that.
+
+**Log every step in the project docs:**
+- Maintain a running work log at `docs/worklog.md`. For each step, append a dated entry recording **what** was done, **why**, and the **verification result** (which checks ran and whether they passed, including the edge cases checked).
+- Keep entries concise (a few bullet points per step). The log is in English, like all project docs.
+
 ## Project Overview
 An interactive web application where users type natural-language drawing instructions (e.g., "draw a sunset over the sea"), an LLM parses the prompt into structured JSON drawing commands, and a canvas engine renders the result. Drawings can be saved to and loaded from a backend API.
 
