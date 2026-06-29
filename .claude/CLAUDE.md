@@ -450,7 +450,22 @@ cd backend && dotnet run
 
 # Backend migrations
 cd backend && dotnet ef migrations add Init && dotnet ef database update
+
+# Backend tests (xUnit integration tests: WebApplicationFactory + SQLite in-memory)
+dotnet test backend.Tests
+
+# Frontend tests (Vitest)
+cd frontend && npx vitest run
 ```
+
+## Testing
+
+- **Frontend:** Vitest unit tests under `frontend/src/**` (pipeline, drawEngine, store, api).
+- **Backend:** `backend.Tests/` — integration tests that boot the real app via
+  `WebApplicationFactory<Program>` against an in-memory SQLite database (enforces
+  the unique email index + cascade delete). Cover auth (register/login/validation)
+  and `/api/drawings` CRUD, including the ownership invariant (a user gets 404 —
+  never another user's data — on get/update/delete of a drawing they don't own).
 
 ## Canvas Coordinate Space
 Always 800×600. The LLM system prompt states this explicitly. `CanvasView` CSS-scales the canvas to fit the viewport but the logical pixel space is always 800×600. This prevents coordinate drift between LLM output and render.

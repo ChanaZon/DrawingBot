@@ -1,7 +1,12 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using backend.Data;
 using backend.Infrastructure;
 using backend.Services;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +42,51 @@ builder.Services.AddValidatorsFromAssemblyContaining<backend.Validators.DrawComm
 // Application layer: orchestrates LLM call + parse + validation for /api/draw/parse.
 builder.Services.AddScoped<IDrawParsingService, DrawParsingService>();
 
+// Phase 5 — Persistence: EF Core + SQL Server (CLAUDE.md > Database Schema).
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Phase 5 — CRUD + Auth services.
+builder.Services.AddScoped<IDrawingService, DrawingService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Phase 5 — JWT authentication. Secret + issuer/audience come from the "Jwt"
+// config section (gitignored appsettings.Development.json / env vars).
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection(JwtOptions.SectionName));
+
+var jwtOptions = builder.Configuration
+    .GetSection(JwtOptions.SectionName)
+    .Get<JwtOptions>() ?? new JwtOptions();
+
+// Fail loudly at boot on a missing/weak signing key rather than silently booting
+// with an empty key that would weaken auth. HMAC-SHA256 needs >= 256 bits.
+if (Encoding.UTF8.GetByteCount(jwtOptions.Secret) < 32)
+    throw new InvalidOperationException(
+        "Jwt:Secret is missing or too short (need at least 32 bytes). " +
+        "Set it in appsettings.Development.json or the Jwt__Secret environment variable.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+            // No grace period on expiry — a stale token is rejected immediately.
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // Global safety net for UNEXPECTED exceptions → consistent 500 ProblemDetails.
 // Domain failures stay as Result + MapError in the controller (never thrown).
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -67,8 +117,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Authentication must run before authorization so [Authorize] sees the principal.
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+// Exposes the implicit top-level Program class so the integration test project
+// (backend.Tests) can drive the app via WebApplicationFactory<Program>.
+public partial class Program { }

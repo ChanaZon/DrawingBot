@@ -195,6 +195,14 @@ The system prompt must include:
 
 ## Phase 5 — Backend: CRUD + DB
 
+> **Status: implemented.** EF Core models + `AppDbContext` + `Init` migration
+> applied to SQL Server; `AuthController` (register/login, BCrypt + JWT) and
+> `DrawingsController` (full CRUD, ownership-scoped) live; JWT middleware wired in
+> `Program.cs`; `DrawController` switched to `[Authorize]`. Verified end-to-end
+> (401 unauth → register → save → list → get → update → cross-user 404 → delete).
+> Covered by `backend.Tests` (xUnit + WebApplicationFactory + SQLite in-memory):
+> 18 integration tests for auth + CRUD + ownership. Run with `dotnet test`.
+
 **Goal:** Save and load drawings from SQL Server. Auth protects all endpoints.
 
 **Files to create:**

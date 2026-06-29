@@ -7,8 +7,8 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/draw")]
-// Phase 3: no auth yet. Switches to [Authorize] in Phase 5.
-[AllowAnonymous]
+// Phase 5: the parse endpoint now requires a valid JWT (CLAUDE.md > API Endpoints).
+[Authorize]
 public class DrawController : ControllerBase
 {
     private readonly IDrawParsingService _parsing;
