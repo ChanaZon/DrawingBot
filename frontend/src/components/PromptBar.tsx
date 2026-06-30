@@ -10,9 +10,13 @@ import {
   applyDelta,
   replaceScene,
   setError,
+  setLastPrompt,
   setLoading,
   setPrompt,
 } from "../store/drawingSlice";
+
+// Cap matching the backend Prompt column (SaveDrawingRequestValidator: 2000).
+const MAX_PROMPT_LEN = 2000;
 
 // Phase 4: the end-to-end entry point. Prompt → backend (/api/draw/parse) →
 // Zod pipeline → Redux scene → canvas. The component owns no scene state of its
@@ -26,6 +30,7 @@ import {
 export function PromptBar() {
   const dispatch = useAppDispatch();
   const prompt = useAppSelector((s) => s.drawing.prompt);
+  const lastPrompt = useAppSelector((s) => s.drawing.lastPrompt);
   const isLoading = useAppSelector((s) => s.drawing.isLoading);
   const scene = useAppSelector(selectScene);
   const isEditing = scene.length > 0;
@@ -69,6 +74,8 @@ export function PromptBar() {
     }
 
     dispatch(replaceScene({ scene: result.value, label: `prompt: ${trimmed}` }));
+    // Record the originating prompt so Save can persist it (the input is cleared).
+    dispatch(setLastPrompt(trimmed));
     dispatch(setPrompt(""));
   }
 
@@ -84,6 +91,9 @@ export function PromptBar() {
     }
 
     dispatch(applyDelta({ delta: result.value, label: `edit: ${trimmed}` }));
+    // Accumulate the edit into the saved-drawing prompt (capped to the DB column).
+    const combined = lastPrompt ? `${lastPrompt} | ${trimmed}` : trimmed;
+    dispatch(setLastPrompt(combined.slice(0, MAX_PROMPT_LEN)));
     dispatch(setPrompt(""));
   }
 

@@ -17,9 +17,18 @@ export type DrawingState = {
   history: HistoryEntry[];
   historyIndex: number; // index of the last applied entry; -1 = clean
   prompt: string;
+  // The prompt that produced the current scene. Kept separate from `prompt`
+  // (the live input, which is cleared after a successful draw) so Save can record
+  // the originating prompt. Set on create/edit and when loading a saved drawing.
+  lastPrompt: string;
+  // Optional user-supplied title for the current drawing (used on save/update).
+  // Populated when a saved drawing is loaded; reset when the canvas is cleared.
+  title: string;
   isLoading: boolean;
   error: string | null;
   isAuthenticated: boolean;
+  // The saved-drawing id the canvas is linked to: null = unsaved/new (Save creates),
+  // a number = loaded/saved (Save updates that row). Cleared on `clear`.
   currentDrawingId: number | null;
 };
 
@@ -28,6 +37,8 @@ const initialState: DrawingState = {
   history: [],
   historyIndex: -1,
   prompt: "",
+  lastPrompt: "",
+  title: "",
   isLoading: false,
   error: null,
   isAuthenticated: false,
@@ -167,10 +178,17 @@ const drawingSlice = createSlice({
       };
       pushHistory(state, "clear", delta, revert);
       applyToScene(state.scene, delta);
+      // Clearing the canvas starts fresh: detach from any loaded/saved drawing so
+      // the next Save creates a new row rather than overwriting the previous one.
+      state.currentDrawingId = null;
+      state.lastPrompt = "";
+      state.title = "";
     },
 
     // Load a saved drawing: replace the scene and reset history to a fresh
-    // baseline — you cannot undo past a load.
+    // baseline — you cannot undo past a load. The saved-drawing linkage
+    // (currentDrawingId / lastPrompt / title) is set by the caller alongside this
+    // (see DrawingList.handleLoad), keeping this reducer scene-only.
     loadScene(state, action: PayloadAction<SceneObject[]>) {
       state.scene = action.payload.map(clone);
       state.history = [];
@@ -179,6 +197,14 @@ const drawingSlice = createSlice({
 
     setPrompt(state, action: PayloadAction<string>) {
       state.prompt = action.payload;
+    },
+
+    setLastPrompt(state, action: PayloadAction<string>) {
+      state.lastPrompt = action.payload;
+    },
+
+    setTitle(state, action: PayloadAction<string>) {
+      state.title = action.payload;
     },
 
     setLoading(state, action: PayloadAction<boolean>) {
@@ -207,6 +233,8 @@ export const {
   clear,
   loadScene,
   setPrompt,
+  setLastPrompt,
+  setTitle,
   setLoading,
   setError,
   setAuthenticated,

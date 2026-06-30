@@ -1,14 +1,14 @@
 import axios, { type AxiosError } from "axios";
 import type { DrawCommand } from "../types/DrawCommand";
+import { http } from "./http";
 
 // HTTP client for the ASP.NET backend. The frontend never holds an LLM API key
 // (CLAUDE.md > Security): prompts go to POST /api/draw/parse and the server
 // returns a validated DrawCommand[]. The raw command array is returned here as
 // `unknown` so the Zod pipeline (runPipeline) remains the single validation gate.
-
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000";
-
-const http = axios.create({ baseURL });
+//
+// The shared `http` instance (api/http.ts) attaches the JWT bearer token, so the
+// now-protected parse/edit routes are authenticated automatically.
 
 // Backend success body for POST /api/draw/parse in CREATE mode: { commands: DrawCommand[] }.
 type ParseResponseBody = { commands: unknown };
@@ -81,6 +81,12 @@ export function toFriendlyMessage(err: unknown): string {
   // No response → request never completed (server down, CORS, network).
   if (!axiosErr.response) {
     return "Could not reach the drawing service. Is the backend running?";
+  }
+
+  // The protected route rejected our token. The shared 401 interceptor already
+  // routes back to login; this is just the message shown in the meantime.
+  if (axiosErr.response.status === 401) {
+    return "Your session has expired. Please sign in again.";
   }
 
   const body = axiosErr.response.data;
